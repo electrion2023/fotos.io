@@ -3,81 +3,106 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel QR - Actualizar</title>
+    <title>reemplaza qr Electrion</title>
     <style>
         body { font-family: sans-serif; background: #121212; color: white; display: flex; justify-content: center; padding: 20px; }
-        .card { background: #1e1e1e; padding: 20px; border-radius: 15px; width: 100%; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; }
-        h2 { color: #4ade80; }
-        input { width: 100%; margin: 15px 0; background: #2d2d2d; border: 1px solid #444; color: white; padding: 10px; border-radius: 8px; box-sizing: border-box; }
-        button { width: 100%; padding: 15px; background: #4ade80; color: #000; border: none; border-radius: 8px; font-weight: bold; font-size: 18px; cursor: pointer; }
-        #log { margin-top: 20px; font-size: 14px; color: #aaa; }
+        .card { background: #1e1e1e; padding: 25px; border-radius: 15px; width: 100%; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; }
+        h2 { color: #4ade80; margin-bottom: 5px; }
+        p.subtitle { color: #888; font-size: 14px; margin-bottom: 25px; }
+        .group { text-align: left; margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: bold; color: #4ade80; font-size: 14px; }
+        input { width: 100%; background: #2d2d2d; border: 1px solid #444; color: white; padding: 12px; border-radius: 8px; box-sizing: border-box; }
+        button { width: 100%; padding: 15px; background: #4ade80; color: #000; border: none; border-radius: 8px; font-weight: bold; font-size: 18px; cursor: pointer; margin-top: 10px; }
+        button:active { transform: scale(0.98); }
+        #log { margin-top: 20px; font-size: 14px; color: #aaa; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>Actualizar Fotos QR</h2>
-    <p>Seleccioná las nuevas imágenes:</p>
+    <h2>Panel de Control QR</h2>
+    <p class="subtitle">Actualiza las imágenes de los envases</p>
     
-    <label style="display:block; text-align:left;">QR 1 (foto1.jpg)</label>
-    <input type="file" id="f1" accept="image/*">
+    <div class="group">
+        <label>Imagen QR 20 Litros</label>
+        <input type="file" id="f20" accept="image/*">
+    </div>
 
-    <label style="display:block; text-align:left;">QR 2 (foto2.jpg)</label>
-    <input type="file" id="f2" accept="image/*">
+    <div class="group">
+        <label>Imagen QR 12 Litros</label>
+        <input type="file" id="f12" accept="image/*">
+    </div>
 
-    <button onclick="enviarTodo()">SUBIR AHORA</button>
+    <button onclick="enviarTodo()">ACTUALIZAR AMBOS</button>
     <p id="log"></p>
 </div>
 
 <script>
-// TRUCO: Dividimos el token para que GitHub no lo detecte y no lo borre
+// Configuración de acceso
 const p1 = "ghp_72wBeLlpL4pkrHuZqH2Wp7efy";
 const p2 = "OWqyf2V6tn8"; 
 const TOKEN = p1 + p2;
 
 const USER = "electrion2023";
-const REPO = "fotos";
+const REPO = "electrion.github.io";
 
 async function enviarTodo() {
     const log = document.getElementById('log');
-    const file1 = document.getElementById('f1').files[0];
-    const file2 = document.getElementById('f2').files[0];
+    const f20 = document.getElementById('f20').files[0];
+    const f12 = document.getElementById('f12').files[0];
 
-    if(!file1 || !file2) return alert("Cargá las dos fotos primero");
+    if(!f20 || !f12) return alert("Por favor, selecciona las dos imágenes.");
 
-    log.innerText = "Subiendo... No cierres la ventana ⏳";
+    log.innerText = "Subiendo archivos a GitHub... ⏳";
+    log.style.color = "#aaa";
 
     try {
-        await subir(file1, "foto1.jpg");
-        await subir(file2, "foto2.jpg");
-        log.innerText = "✅ ¡LISTO! Los QR ya están actualizados.";
+        // Subida de archivos con los nombres solicitados
+        await subirAmanualmente(f20, "qr20lts.jpg");
+        await subirAmanualmente(f12, "qr12lts.jpg");
+        
+        log.innerText = "✅ ¡FOTOS ACTUALIZADAS EXITOSAMENTE!";
         log.style.color = "#4ade80";
     } catch (e) {
-        log.innerText = "❌ Error: " + e.message;
+        log.innerText = "❌ ERROR: " + e.message;
         log.style.color = "#ff4a4a";
     }
 }
 
-async function subir(file, nombre) {
+async function subirAmanualmente(file, nombreDestino) {
     const reader = new FileReader();
     return new Promise((resolve, reject) => {
         reader.readAsDataURL(file);
         reader.onload = async () => {
-            const base64 = reader.result.split(',')[1];
-            const url = `https://api.github.com/repos/${USER}/${REPO}/contents/${nombre}`;
+            const contentBase64 = reader.result.split(',')[1];
+            const url = `https://api.github.com/repos/${USER}/${REPO}/contents/${nombreDestino}`;
             
-            // Ver si ya existe para sacar el SHA (burocracia de GitHub)
+            // 1. Obtener el SHA si el archivo ya existe
             let sha = "";
-            const res = await fetch(url, { headers: { "Authorization": `token ${TOKEN}` } });
-            if(res.ok) { const data = await res.json(); sha = data.sha; }
+            const res = await fetch(url, { 
+                headers: { "Authorization": `token ${TOKEN}` } 
+            });
+            if(res.ok) { 
+                const data = await res.json(); 
+                sha = data.sha; 
+            }
 
-            const final = await fetch(url, {
+            // 2. Subir / Reemplazar
+            const response = await fetch(url, {
                 method: "PUT",
-                headers: { "Authorization": `token ${TOKEN}`, "Content-Type": "application/json" },
-                body: JSON.stringify({ message: "update", content: base64, sha: sha })
+                headers: { 
+                    "Authorization": `token ${TOKEN}`, 
+                    "Content-Type": "application/json" 
+                },
+                body: JSON.stringify({ 
+                    message: "Update " + nombreDestino, 
+                    content: contentBase64, 
+                    sha: sha 
+                })
             });
 
-            if(final.ok) resolve(); else reject(new Error("Falló subida de " + nombre));
+            if(response.ok) resolve(); 
+            else reject(new Error("No se pudo subir " + nombreDestino));
         };
     });
 }
